@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import 'dart:io';
 
 class RoutineScreen extends StatefulWidget {
@@ -8,13 +10,34 @@ class RoutineScreen extends StatefulWidget {
 }
 
 class _RoutineScreenState extends State<RoutineScreen> {
-  final List<Map<String, dynamic>> routineItems = [
+  List<Map<String, dynamic>> routineItems = [
     {'title': 'Cleanser', 'subtitle': '', 'time': '', 'uploaded': false, 'imageUrl': ''},
     {'title': 'Toner', 'subtitle': '', 'time': '', 'uploaded': false, 'imageUrl': ''},
     {'title': 'Moisturizer', 'subtitle': '', 'time': '', 'uploaded': false, 'imageUrl': ''},
     {'title': 'Sunscreen', 'subtitle': '', 'time': '', 'uploaded': false, 'imageUrl': ''},
     {'title': 'Lip Balm', 'subtitle': '', 'time': '', 'uploaded': false, 'imageUrl': ''},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRoutineItems();
+  }
+
+  Future<void> _loadRoutineItems() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedData = prefs.getString('routineItems');
+    if (savedData != null) {
+      setState(() {
+        routineItems = List<Map<String, dynamic>>.from(json.decode(savedData));
+      });
+    }
+  }
+
+  Future<void> _saveRoutineItems() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('routineItems', json.encode(routineItems));
+  }
 
   Future<void> uploadImage(int index) async {
     final picker = ImagePicker();
@@ -50,67 +73,93 @@ class _RoutineScreenState extends State<RoutineScreen> {
       String productName = nameController.text.trim();
       if (productName.isEmpty) return;
 
-      // Update local state to simulate saving to a local database
       setState(() {
         routineItems[index]['uploaded'] = true;
         routineItems[index]['imageUrl'] = file.path;
         routineItems[index]['time'] = DateTime.now().toString();
         routineItems[index]['subtitle'] = productName;
       });
+
+      // Save updated data
+      await _saveRoutineItems();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Daily Skincare'),
-        centerTitle: true,
-        backgroundColor: Colors.pink[50],
-        elevation: 0,
-      ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: routineItems.length,
-        itemBuilder: (context, index) {
-          final item = routineItems[index];
-          return Card(
-            child: ListTile(
-              leading: Icon(
-                item['uploaded'] ? Icons.check_circle : Icons.radio_button_unchecked,
-                color: Colors.pink,
+    return WillPopScope(
+      onWillPop: () async {
+        // Save data when navigating back
+        await _saveRoutineItems();
+        return true;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Daily Skincare'),
+          centerTitle: true,
+          backgroundColor: Colors.pink[50],
+          elevation: 0,
+        ),
+        body: ListView.builder(
+          padding: const EdgeInsets.all(16.0),
+          itemCount: routineItems.length,
+          itemBuilder: (context, index) {
+            final item = routineItems[index];
+            return Card(
+              color: item['uploaded'] ? Colors.pink[50] : Colors.white,
+              child: ListTile(
+                leading: item['imageUrl']!.isNotEmpty && File(item['imageUrl']).existsSync()
+                    ? Image.file(
+                  File(item['imageUrl']),
+                  width: 40,
+                  height: 40,
+                  fit: BoxFit.cover,
+                )
+                    : Icon(Icons.camera_alt, color: Colors.grey, size: 40),
+                title: Text(item['title']!, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item['subtitle']!.isNotEmpty ? item['subtitle']! : 'Tap to add details'),
+                    if (item['time']!.isNotEmpty)
+                      Text(
+                        'Uploaded: ${item['time']!}',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                  ],
+                ),
+                onTap: () {
+                  if (item['imageUrl']!.isNotEmpty && File(item['imageUrl']).existsSync()) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ImagePreviewScreen(imageUrl: item['imageUrl']),
+                      ),
+                    );
+                  } else {
+                    uploadImage(index);
+                  }
+                },
               ),
-              title: Text(item['title']!, style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text(item['subtitle']!.isNotEmpty ? item['subtitle']! : 'Tap to add details'),
-              trailing: IconButton(
-                icon: Icon(Icons.camera_alt, color: Colors.grey),
-                onPressed: () => uploadImage(index),
-              ),
-              onLongPress: () {
-                if (item['imageUrl']!.isNotEmpty) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ImagePreviewScreen(imageUrl: item['imageUrl']),
-                    ),
-                  );
-                }
-              },
-            ),
-          );
-        },
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.list), label: 'Routine'),
-          BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: 'Streaks'),
-        ],
-        onTap: (index) {
-          if (index == 1) {
-            Navigator.pushNamed(context, '/streaks');
-          }
-        },
+            );
+          },
+        ),
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: 0,
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.list), label: 'Routine'),
+            BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: 'Streaks'),
+          ],
+          onTap: (index) async {
+            if (index == 1) {
+              await Navigator.pushNamed(context, '/streaks');
+            } else if (index == 0) {
+              // Reload routine items when revisiting
+              await _loadRoutineItems();
+              setState(() {});
+            }
+          },
+        ),
       ),
     );
   }
