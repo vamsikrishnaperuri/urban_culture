@@ -21,7 +21,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
 
   final String cloudinaryUploadUrl =
       'https://api.cloudinary.com/v1_1/df6o3ijio/image/upload'; // Replace YOUR_CLOUD_NAME
-  final String cloudinaryUploadPreset = 'urbanculture'; // Replace YOUR_UPLOAD_PRESET
+  final String cloudinaryUploadPreset = 'newurban'; // Replace YOUR_UPLOAD_PRESET
 
   @override
   void initState() {
@@ -51,18 +51,21 @@ class _RoutineScreenState extends State<RoutineScreen> {
       request.files.add(await http.MultipartFile.fromPath('file', file.path));
 
       final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+
       if (response.statusCode == 200) {
-        final responseBody = await response.stream.bytesToString();
         final decodedResponse = json.decode(responseBody);
         return decodedResponse['secure_url']; // Cloudinary image URL
       } else {
         print('Cloudinary upload failed: ${response.statusCode}');
+        print('Response body: $responseBody');
       }
     } catch (e) {
       print('Error uploading to Cloudinary: $e');
     }
     return null;
   }
+
 
   Future<void> uploadImage(int index) async {
     final picker = ImagePicker();
