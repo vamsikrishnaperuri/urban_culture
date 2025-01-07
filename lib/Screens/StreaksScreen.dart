@@ -16,13 +16,11 @@ class _StreaksScreenState extends State<StreaksScreen> with SingleTickerProvider
   void initState() {
     super.initState();
 
-    // Initialize animation controller
     _controller = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
     );
 
-    // Define animation to count streak
     _streakAnimation = IntTween(begin: 0, end: _targetStreak).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     )..addListener(() {
@@ -187,7 +185,7 @@ class _StreaksScreenState extends State<StreaksScreen> with SingleTickerProvider
                           // Add your logic here for what happens when "Get Started" is clicked
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xEFA4BDFF),
+                          backgroundColor: const Color(0xEFA4BDFF),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                         ),
                         child: const Text('Get Started'),

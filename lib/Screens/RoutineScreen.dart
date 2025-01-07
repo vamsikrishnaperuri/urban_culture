@@ -6,6 +6,8 @@ import 'dart:convert';
 import 'dart:io';
 
 class RoutineScreen extends StatefulWidget {
+  const RoutineScreen({super.key});
+
   @override
   _RoutineScreenState createState() => _RoutineScreenState();
 }
@@ -57,15 +59,14 @@ class _RoutineScreenState extends State<RoutineScreen> {
         final decodedResponse = json.decode(responseBody);
         return decodedResponse['secure_url']; // Cloudinary image URL
       } else {
-        print('Cloudinary upload failed: ${response.statusCode}');
-        print('Response body: $responseBody');
+        // print('Cloudinary upload failed: ${response.statusCode}');
+        // print('Response body: $responseBody');
       }
     } catch (e) {
       print('Error uploading to Cloudinary: $e');
     }
     return null;
   }
-
 
   Future<void> uploadImage(int index) async {
     final picker = ImagePicker();
@@ -82,16 +83,16 @@ class _RoutineScreenState extends State<RoutineScreen> {
             title: Text('Enter Name for ${routineItems[index]['title']}'),
             content: TextField(
               controller: nameController,
-              decoration: InputDecoration(hintText: 'Enter product name'),
+              decoration: const InputDecoration(hintText: 'Enter product name'),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text('Cancel'),
+                child: const Text('Cancel'),
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text('OK'),
+                child: const Text('OK'),
               ),
             ],
           );
@@ -146,7 +147,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                   height: 40,
                   fit: BoxFit.cover,
                 )
-                    : Icon(Icons.camera_alt, color: Colors.grey, size: 40),
+                    : const Icon(Icons.camera_alt, color: Colors.grey, size: 40),
                 title: Text(item['title']!, style: const TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -155,10 +156,16 @@ class _RoutineScreenState extends State<RoutineScreen> {
                     if (item['time']!.isNotEmpty)
                       Text(
                         'Uploaded: ${item['time']!}',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                   ],
                 ),
+                trailing: item['uploaded']
+                    ? IconButton(
+                  icon: const Icon(Icons.camera_alt, color: Colors.blue),
+                  onPressed: () => uploadImage(index), // Upload new image
+                )
+                    : null,
                 onTap: () {
                   if (item['imageUrl']!.isNotEmpty) {
                     Navigator.push(
