@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
 
@@ -17,6 +18,10 @@ class _RoutineScreenState extends State<RoutineScreen> {
     {'title': 'Sunscreen', 'subtitle': '', 'time': '', 'uploaded': false, 'imageUrl': ''},
     {'title': 'Lip Balm', 'subtitle': '', 'time': '', 'uploaded': false, 'imageUrl': ''},
   ];
+
+  final String cloudinaryUploadUrl =
+      'https://api.cloudinary.com/v1_1/df6o3ijio/image/upload'; // Replace YOUR_CLOUD_NAME
+  final String cloudinaryUploadPreset = 'urbanculture'; // Replace YOUR_UPLOAD_PRESET
 
   @override
   void initState() {
@@ -37,6 +42,26 @@ class _RoutineScreenState extends State<RoutineScreen> {
   Future<void> _saveRoutineItems() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('routineItems', json.encode(routineItems));
+  }
+
+  Future<String?> uploadToCloudinary(File file) async {
+    try {
+      final request = http.MultipartRequest('POST', Uri.parse(cloudinaryUploadUrl));
+      request.fields['upload_preset'] = cloudinaryUploadPreset;
+      request.files.add(await http.MultipartFile.fromPath('file', file.path));
+
+      final response = await request.send();
+      if (response.statusCode == 200) {
+        final responseBody = await response.stream.bytesToString();
+        final decodedResponse = json.decode(responseBody);
+        return decodedResponse['secure_url']; // Cloudinary image URL
+      } else {
+        print('Cloudinary upload failed: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error uploading to Cloudinary: $e');
+    }
+    return null;
   }
 
   Future<void> uploadImage(int index) async {
@@ -73,9 +98,12 @@ class _RoutineScreenState extends State<RoutineScreen> {
       String productName = nameController.text.trim();
       if (productName.isEmpty) return;
 
+      String? imageUrl = await uploadToCloudinary(file);
+      if (imageUrl == null) return;
+
       setState(() {
         routineItems[index]['uploaded'] = true;
-        routineItems[index]['imageUrl'] = file.path;
+        routineItems[index]['imageUrl'] = imageUrl;
         routineItems[index]['time'] = DateTime.now().toString();
         routineItems[index]['subtitle'] = productName;
       });
@@ -108,9 +136,9 @@ class _RoutineScreenState extends State<RoutineScreen> {
             return Card(
               color: item['uploaded'] ? Colors.pink[50] : Colors.white,
               child: ListTile(
-                leading: item['imageUrl']!.isNotEmpty && File(item['imageUrl']).existsSync()
-                    ? Image.file(
-                  File(item['imageUrl']),
+                leading: item['imageUrl']!.isNotEmpty
+                    ? Image.network(
+                  item['imageUrl'],
                   width: 40,
                   height: 40,
                   fit: BoxFit.cover,
@@ -129,7 +157,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                   ],
                 ),
                 onTap: () {
-                  if (item['imageUrl']!.isNotEmpty && File(item['imageUrl']).existsSync()) {
+                  if (item['imageUrl']!.isNotEmpty) {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -175,7 +203,7 @@ class ImagePreviewScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Image Preview')),
       body: Center(
-        child: Image.file(File(imageUrl)),
+        child: Image.network(imageUrl),
       ),
     );
   }
