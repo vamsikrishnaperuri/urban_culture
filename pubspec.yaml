@@ -41,6 +41,8 @@ dependencies:
   http: ^1.1.0
   cloudinary_dart: 0.0.11
   cloudinary_api: ^1.0.0
+  fl_chart: 0.36.0
+  syncfusion_flutter_charts: ^20.4.38
 
 
 dev_dependencies:
