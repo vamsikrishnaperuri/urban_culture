@@ -18,7 +18,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.pink,
       ),
-      // Define routes for navigation
+
       initialRoute: '/routine',
       routes: {
         '/routine': (context) => RoutineScreen(),
